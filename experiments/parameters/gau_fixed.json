@@ -1,0 +1,36 @@
+{
+    "n_experiments": 10,
+
+    "parameterisation": "AAT", 
+    
+    "load_name": "gaussian_fixed_cov",
+    "normalize": false,
+    "dtype": "float32",
+
+    "perturbation": "gaussian",
+    "perturbation_type": "fixed",
+
+    "hidden_dim": 5,
+    "n_hidden_layers": 1,
+    "hidden_dim_matrix": 100,
+    "n_hidden_layers_matrix": 3,
+
+    "batch_size": 100,
+    "num_epochs": 1000,
+
+    "lr_center": 0.001,
+    "lr_matrix": 0.001,
+
+    "use_lr_scheduler": true,
+
+    "keep_best": true,
+
+    "prop_train": 0.7,
+    "prop_stop": 0.1,
+    "prop_calibration": 0.1,
+    "prop_test": 0.1,
+
+    "idx_knowned": [0, 1],
+
+    "alpha": 0.1
+}
