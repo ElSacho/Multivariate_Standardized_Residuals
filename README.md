@@ -1,6 +1,6 @@
 # Multivariate Conformal Prediction via Conformalized Gaussian Scoring
 
-This repository provides tools for constructing and evaluating conformal prediction sets for multivariate regression, implementing our proposed **Multivariate Conformal Prediction via Conformalized Gaussian Scoring** method. It accompanies our paper:
+This repository provides tools for constructing and evaluating conformal prediction sets for multivariate regression, implementing our proposed **Gaussian Conformal Prediction** method. It accompanies our paper:
 
 **Multivariate Conformal Prediction via Conformalized Gaussian Scoring**.
 
@@ -42,7 +42,7 @@ To generate a figure used in the paper, run the corresponding `make_fig_<EXPERIM
 
 ## Using `GaussianPredictorLevelsets` & `GaussianPredictorMissingValues`
 
-The `GaussianPredictorLevelsets` class requires two models as input:
+The `GaussianPredictorLevelsets` and `GaussianPredictorMissingValues` classes require two models as input:
 - A **center model**, which should ideally be pre-trained.
 - A **matrix model**, used to fit the covariance matrix. 
 
@@ -119,12 +119,10 @@ predictor = GaussianPredictorLevelsets(center_model, matrix_model)
 predictor.fit(trainloader)
 
 # Conformalize the prediction sets
-predictor.conformalize_linear_projection(
-                                            projection_matrix=projection_matrix_tensor,
+predictor.conformalize_linear_projection(projection_matrix=projection_matrix_tensor,
                                             x_calibration=x_calibration_tensor, 
                                             y_calibration=y_calibration_tensor, 
-                                            alpha = alpha
-                                            )
+                                            alpha = alpha)
 
 # Get volume and coverage
 volume = predictor.get_coverage_projection(x_test_tensor, y_test_tensor)
@@ -134,6 +132,6 @@ coverage = predictor.get_averaged_volume_projection(x_test_tensor).item()
 ## Citation
 If you use this repository for research purposes, please cite our paper:
 
-**Minimum Volume Conformal Sets for Multivariate Regression**.
+**Multivariate Conformal Prediction via Conformalized Gaussian Scoring**.
 
 For any questions, feel free to contact us.
