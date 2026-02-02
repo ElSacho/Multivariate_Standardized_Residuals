@@ -8,3 +8,4 @@ argparse
 tqdm
 pot
 seaborn
+covmetrics

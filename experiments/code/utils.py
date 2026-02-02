@@ -160,3 +160,34 @@ def add_nan(y, min_nan=1, max_nan=None):
         y_nan[i, nan_indices] = np.nan
         
     return y_nan
+
+
+def add_nan_extreme_values(y, percentage=0.1):
+    """
+    Set NaN on the most extreme values of y (by absolute value).
+
+    Parameters:
+        y (np.ndarray): Array of shape (n, k).
+        percentage (float): Fraction of extreme values to replace with NaN (e.g. 0.1 = 10%).
+
+    Returns:
+        np.ndarray: Copy of y with NaNs inserted.
+    """
+    y_nan = y.copy()
+
+    # Flatten to compute global threshold
+    flat = np.abs(y_nan).ravel()
+    
+    # Number of values to replace
+    n_extreme = int(np.ceil(percentage * flat.size))
+    if n_extreme == 0:
+        return y_nan
+
+    # Threshold for extreme values
+    threshold = np.partition(flat, -n_extreme)[-n_extreme]
+
+    # Mask extreme values
+    mask = np.abs(y_nan) >= threshold
+    y_nan[mask] = np.nan
+
+    return y_nan

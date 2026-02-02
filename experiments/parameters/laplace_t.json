@@ -1,0 +1,31 @@
+{
+    "n_experiments": 10,
+
+    "parameterisation": "AAT", 
+    
+    "load_name": "exponential_tx",
+    "normalize": false,
+    "dtype": "float32",
+
+    "perturbation": "laplace",
+    "perturbation_type": "tx",
+    
+    "hidden_dim": 256,
+    "n_hidden_layers": 3,
+
+    "batch_size": 100,
+    "num_epochs": 250,
+
+    "lr": 1e-3,
+
+    "hidden_dim_matrix": 256,
+    "n_hidden_layers_matrix": 3,
+    "lr_matrix": 1e-3,
+
+    "prop_train": 0.7,
+    "prop_stop": 0.1,
+    "prop_calibration": 0.1,
+    "prop_test": 0.1,
+
+    "idx_knowned": [0]
+}

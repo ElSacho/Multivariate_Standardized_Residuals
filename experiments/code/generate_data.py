@@ -5,8 +5,10 @@ from scipy.stats import special_ortho_group
 from scipy.spatial.transform import Rotation as R
 from scipy.linalg import cholesky
 from scipy.linalg import logm, expm
+from scipy.stats import skewnorm
 from utils import KMeans
 from utils import seed_everything
+
 
 
 def interpolate_rotations(tab_matrix, weights):
@@ -356,6 +358,9 @@ def get_perturbation(perturbation, n_train, k, covariance_matrix=None):
         data_perturbation_train = np.random.standard_t(df=3, size=(n_train, k))  # df est le nombre de degrés de liberté
     elif perturbation == "cauchy":
         data_perturbation_train = np.random.standard_cauchy(size=(n_train, k))
+    elif perturbation == "skewed":
+        a = 5 
+        data_perturbation_train = skewnorm.rvs(a, loc=0, scale=1, size=(n_train, k))
     else:
         data_perturbation_train = np.zeros((n_train, k))
     return data_perturbation_train

@@ -1,8 +1,8 @@
-# Multivariate Conformal Prediction via Conformalized Gaussian Scoring
+# Multivariate Standardized Residuals for Conformal Prediction
 
-This repository provides tools for constructing and evaluating conformal prediction sets for multivariate regression, implementing our proposed **Gaussian Conformal Prediction** method. It accompanies our paper:
+This repository provides tools for constructing and evaluating conformal prediction sets for multivariate regression, implementing our proposed **Multivariate Standardized Residuals** method. It accompanies our paper:
 
-**Multivariate Conformal Prediction via Conformalized Gaussian Scoring**.
+**Multivariate Standardized Residuals for Conformal Prediction**.
 
 ## Installation
 
@@ -16,21 +16,21 @@ pip install -r requirements.txt
 The package is organized as follows:
 
 ### **code/**  
-Contains the core implementation of Gaussian-Scoring methods:
-- `gaussian_predictor_levelsets.py`: Implements the `GaussianPredictorLevelsets` class for learning and evaluating Gaussian-Scoring on complete data.
-- `gaussian_predictor_missing_outputs.py`: Implements the `GaussianPredictorMissingValues` class for learning and evaluating Gaussian-Scoring with missing output values.
-- `example_of_usage.ipynb`: Jupyter notebook demonstrating how to use the implemented methods.
+Contains the core implementation of standardized residuals methods:
+- `standardized_residuals.py`: Implements the `StandardizedResiduals` class for learning and evaluating Mahalanobis on complete or incomplete data.
+- `example_of_usage_with_pretrained_model.ipynb`: Jupyter notebook demonstrating how to use the implemented methods with a pretrained model to predict f(x)
+- `example_of_usage_joint_distribution.ipynb`: Jupyter notebook demonstrating how to use the implemented methods by jointly learning mean and covariance.
 
 ### **experiments/**  
 Contains all resources related to experimental evaluations:
 - **code/**: Scripts to reproduce the experiments described in the paper.  
   To run an experiment, open a terminal in this folder and execute:
   ```bash
-  python generate_experiment_<EXPERIMENT_NAME>.py <parameter_folder_name>
+  python generate_experiment_<EXPERIMENT_NAME>.py <parameter_folder_name> <parameter_seed_number> 
   ```
   Example:
   ```bash
-  python generate_experiment_projection.py taxi01
+  python generate_experiment_projection.py taxi 1
   ```
 
 - **parameters/**: JSON files specifying hyperparameters for various strategies.
@@ -40,98 +40,115 @@ Contains all resources related to experimental evaluations:
 To generate a figure used in the paper, run the corresponding `make_fig_<EXPERIMENT_NAME>.ipynb` notebook.
 
 
-## Using `GaussianPredictorLevelsets` & `GaussianPredictorMissingValues`
+## Using `StandardizedResiduals`
 
-The `GaussianPredictorLevelsets` and `GaussianPredictorMissingValues` classes require two models as input:
-- A **center model**, which should ideally be pre-trained.
-- A **matrix model**, used to fit the covariance matrix. 
+The `StandardizedResiduals` class can either be used on top of an existing pointwise predictor f(x), or by jointly learning f(x) and the covariance matrix.
 
-Those two models should be writen in PyTorch. The **matrix model** should return a SDP matrix. 
+The covariance matrix can be learned by a diagonal + low rank approximation when the dimension of the output is large by initializing with the value "mode="low_rank". Default is "full_cholesky".
 
-### Basic usage for full output
+### Basic usage for existing pointwise predictor
+
+Add a center_model parameter to the StandardizedResiduals class. The other parameters are the input_dim (feature dimension), output_dim, hidden_dim (for the hidden MLP), num_layers (for the hidden MLP aswell).
 
 ```python
-from code.gaussian_predictor_levelsets import GaussianPredictorLevelsets
+StandardizedResiduals(input_dim, 
+                            output_dim,
+                            hidden_dim = hidden_dim,
+                            num_layers = num_layers,
+                            center_model = center_model,
+                            mode="full_cholesky" # or low_rank
+                            )
+```
+The center_model should work with a __call__ function and be compatible with batches, such that 
 
-# Initialize with pre-trained models
-predictor = GaussianPredictorLevelsets(center_model, matrix_model)
+```python
+center_pred = self.center_model(bx)
+```
+works. Its about can either be numpy or torch tensor.
 
-# Fit the models to data
-predictor.fit(trainloader)
+### Basic usage for learning the pointwise predictor jointly
+
+Similar to the previous section, except that no center_model is provided (center_model=None)
+
+```python
+from code.standardized_residuals import StandardizedResiduals
+
+standardized_residuals = StandardizedResiduals(input_dim, 
+                            output_dim,
+                            hidden_dim = hidden_dim,
+                            num_layers = num_layers,
+                            mode="full_cholesky" # or low_rank
+                            )
+
+standardized_residuals.fit(trainloader, 
+                    stoploader,
+                    num_epochs=num_epochs,
+                    lr=lr,
+                    verbose = 2
+                    )
 
 # Conformalize the prediction sets
-predictor.conformalize(calibrationloader, alpha=alpha)
+standardized_residuals.conformalize(x=x_calibration_tensor, y=y_calibration_tensor, alpha = alpha)
 
 # Get volume and coverage
-volume = predictor.get_volume(x_test)
+volume = predictor.get_average_volume(x_test)
 coverage = predictor.get_coverage(testloader)
 ```
 
-### Basic usage for missing outputs
+Once this model has been learned (it automatically detects missing outputs), the extensions can be performed as followed:
+
+#### Missing outputs
 
 ```python
-from code.gaussian_predictor_missing_outputs import GaussianPredictorMissingValues
 
-# Initialize with pre-trained models
-predictor = GaussianPredictorMissingValues(center_model, matrix_model)
+standardized_residuals.conformalize_missing(x = x_calibration_tensor,
+                                            y = y_calibration_nan_tensor, 
+                                            alpha = alpha
+                                            )
 
-# Fit the models to data
-predictor.fit(trainloader)
-
-# Conformalize the prediction sets
-predictor.conformalize(calibrationloader, alpha=alpha)
-
-# Get volume and coverage
-volume = predictor.get_volume(x_test)
-coverage = predictor.get_coverage(testloader)
+coverage_with_nan = standardized_residuals.get_coverage_missing(x_test_tensor, y_test_nan_tensor)
 ```
 
-### Basic usage for revealed outputs
+#### Basic usage for revealed outputs
 
 ```python
-from code.gaussian_predictor_levelsets import GaussianPredictorLevelsets
+idx_knowned = np.array([0]) # Change the the idx number that are revealed
 
-# Initialize with pre-trained models
-predictor = GaussianPredictorLevelsets(center_model, matrix_model)
+standardized_residuals.conformalize_revealed(idx_revealed = idx_knowned,
+                                            x = x_calibration_tensor, 
+                                            y = y_calibration_tensor, 
+                                            alpha = alpha
+                                            )
 
-# Fit the models to data
-predictor.fit(trainloader)
+coverage = standardized_residuals.get_coverage_revealed(x_test_tensor, y_test_tensor)
+volumes  = standardized_residuals.get_average_volume_revealed(x_test_tensor, y_test_tensor[:idx_knowned])
 
-# Conformalize the prediction sets
-predictor.conformalize_with_knowned_idx(x_calibration=x_calibration_tensor, 
-                                            y_calibration=y_calibration_tensor, 
-                                            alpha = alpha, 
-                                            idx_knowned=idx_knowned)
-
-# Get volume and coverage
-volume = predictor.get_coverage_condition_on_idx(x_test_tensor, y_test_tensor)
-coverage = predictor.get_averaged_volume_condition_on_idx(x_test_tensor, y_test_tensor[:, idx_knowned]).item()
+print("Coverage:", coverage)
+print("Average Volume:", volumes)
 ```
 
-### Basic usage for projection of the outputs
+#### Basic usage for projection of the outputs
+
 ```python
-from code.gaussian_predictor_levelsets import GaussianPredictorLevelsets
+projection_matrix_tensor =  torch.randn((2, output_dim), dtype=dtype) # Change to your projection matrix
 
-# Initialize with pre-trained models
-predictor = GaussianPredictorLevelsets(center_model, matrix_model)
+standardized_residuals.conformalize_projection(
+                                            projection_matrix = projection_matrix_tensor,
+                                            x = x_calibration_tensor, 
+                                            y = y_calibration_tensor, 
+                                            alpha = alpha
+                                            )
 
-# Fit the models to data
-predictor.fit(trainloader)
+coverage = standardized_residuals.get_coverage_projection(x_test_tensor, y_test_tensor)
+volumes  = standardized_residuals.get_average_volume_projection(x_test_tensor)
 
-# Conformalize the prediction sets
-predictor.conformalize_linear_projection(projection_matrix=projection_matrix_tensor,
-                                            x_calibration=x_calibration_tensor, 
-                                            y_calibration=y_calibration_tensor, 
-                                            alpha = alpha)
-
-# Get volume and coverage
-volume = predictor.get_coverage_projection(x_test_tensor, y_test_tensor)
-coverage = predictor.get_averaged_volume_projection(x_test_tensor).item()
+print("Coverage:", coverage)
+print("Average Volume:", volumes)
 ```
 
 ## Citation
 If you use this repository for research purposes, please cite our paper:
 
-**Multivariate Conformal Prediction via Conformalized Gaussian Scoring**.
+**Multivariate Standardized Residuals for Conformal Prediction**.
 
 For any questions, feel free to contact us.
